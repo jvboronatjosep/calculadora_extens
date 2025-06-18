@@ -13,8 +13,6 @@ use const PHP_EOL;
 use const PHP_VERSION;
 use function assert;
 use function class_exists;
-use function defined;
-use function dirname;
 use function explode;
 use function function_exists;
 use function is_file;
@@ -24,7 +22,6 @@ use function printf;
 use function realpath;
 use function sprintf;
 use function str_contains;
-use function str_starts_with;
 use function trim;
 use function unlink;
 use PHPUnit\Event\EventFacadeIsSealedException;
@@ -34,8 +31,6 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\TestSuite;
 use PHPUnit\Logging\EventLogger;
 use PHPUnit\Logging\JUnit\JunitXmlLogger;
-use PHPUnit\Logging\OpenTestReporting\CannotOpenUriForWritingException;
-use PHPUnit\Logging\OpenTestReporting\OtrXmlLogger;
 use PHPUnit\Logging\TeamCity\TeamCityLogger;
 use PHPUnit\Logging\TestDox\HtmlRenderer as TestDoxHtmlRenderer;
 use PHPUnit\Logging\TestDox\PlainTextRenderer as TestDoxTextRenderer;
@@ -52,7 +47,7 @@ use PHPUnit\Runner\Extension\ExtensionBootstrapper;
 use PHPUnit\Runner\Extension\Facade as ExtensionFacade;
 use PHPUnit\Runner\Extension\PharLoader;
 use PHPUnit\Runner\GarbageCollection\GarbageCollectionHandler;
-use PHPUnit\Runner\Phpt\TestCase as PhptTestCase;
+use PHPUnit\Runner\PhptTestCase;
 use PHPUnit\Runner\ResultCache\DefaultResultCache;
 use PHPUnit\Runner\ResultCache\NullResultCache;
 use PHPUnit\Runner\ResultCache\ResultCache;
@@ -105,8 +100,6 @@ final readonly class Application
      */
     public function run(array $argv): int
     {
-        $this->preload();
-
         try {
             EventFacade::emitter()->applicationStarted();
 
@@ -160,7 +153,7 @@ final readonly class Application
                 EventFacade::instance()->registerTracer(
                     new EventLogger(
                         'php://stdout',
-                        $configuration->withTelemetry(),
+                        false,
                     ),
                 );
             }
@@ -185,11 +178,7 @@ final readonly class Application
 
             EventFacade::instance()->seal();
 
-            ErrorHandler::instance()->registerDeprecationHandler();
-
             $testSuite = $this->buildTestSuite($configuration);
-
-            ErrorHandler::instance()->restoreDeprecationHandler();
 
             $this->executeCommandsThatRequireTheTestSuite($configuration, $cliConfiguration, $testSuite);
 
@@ -296,7 +285,6 @@ final readonly class Application
             $shellExitCode = (new ShellExitCodeCalculator)->calculate(
                 $configuration->failOnDeprecation() || $configuration->failOnAllIssues(),
                 $configuration->failOnPhpunitDeprecation() || $configuration->failOnAllIssues(),
-                $configuration->failOnPhpunitNotice() || $configuration->failOnAllIssues(),
                 $configuration->failOnEmptyTestSuite() || $configuration->failOnAllIssues(),
                 $configuration->failOnIncomplete() || $configuration->failOnAllIssues(),
                 $configuration->failOnNotice() || $configuration->failOnAllIssues(),
@@ -615,6 +603,10 @@ final readonly class Application
         }
     }
 
+    /**
+     * @throws EventFacadeIsSealedException
+     * @throws UnknownSubscriberTypeException
+     */
     private function registerLogfileWriters(Configuration $configuration): void
     {
         if ($configuration->hasLogEventsText()) {
@@ -660,23 +652,6 @@ final readonly class Application
             }
         }
 
-        if ($configuration->hasLogfileOtr()) {
-            try {
-                new OtrXmlLogger(
-                    $configuration->logfileOtr(),
-                    EventFacade::instance(),
-                );
-            } catch (CannotOpenUriForWritingException $e) {
-                EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
-                    sprintf(
-                        'Cannot log test results in Open Test Reporting XML format to "%s": %s',
-                        $configuration->logfileOtr(),
-                        $e->getMessage(),
-                    ),
-                );
-            }
-        }
-
         if ($configuration->hasLogfileTeamcity()) {
             try {
                 new TeamCityLogger(
@@ -697,6 +672,10 @@ final readonly class Application
         }
     }
 
+    /**
+     * @throws EventFacadeIsSealedException
+     * @throws UnknownSubscriberTypeException
+     */
     private function testDoxResultCollector(Configuration $configuration): ?TestDoxResultCollector
     {
         if ($configuration->hasLogfileTestdoxHtml() ||
@@ -711,6 +690,10 @@ final readonly class Application
         return null;
     }
 
+    /**
+     * @throws EventFacadeIsSealedException
+     * @throws UnknownSubscriberTypeException
+     */
     private function initializeTestResultCache(Configuration $configuration): ResultCache
     {
         if ($configuration->cacheResult()) {
@@ -724,6 +707,10 @@ final readonly class Application
         return new NullResultCache;
     }
 
+    /**
+     * @throws EventFacadeIsSealedException
+     * @throws UnknownSubscriberTypeException
+     */
     private function configureBaseline(Configuration $configuration): ?BaselineGenerator
     {
         if ($configuration->hasGenerateBaseline()) {
@@ -758,7 +745,7 @@ final readonly class Application
     {
         $message = $t->getMessage();
 
-        if (trim($message) === '') {
+        if (empty(trim($message))) {
             $message = '(no message)';
         }
 
@@ -773,7 +760,7 @@ final readonly class Application
 
         $first = true;
 
-        if ($t->getPrevious() !== null) {
+        if ($t->getPrevious()) {
             $t = $t->getPrevious();
         }
 
@@ -868,31 +855,5 @@ final readonly class Application
         }
 
         ErrorHandler::instance()->useDeprecationTriggers($deprecationTriggers);
-    }
-
-    private function preload(): void
-    {
-        if (!defined('PHPUNIT_COMPOSER_INSTALL')) {
-            return;
-        }
-
-        $classMapFile = dirname(PHPUNIT_COMPOSER_INSTALL) . '/composer/autoload_classmap.php';
-
-        if (!is_file($classMapFile)) {
-            return;
-        }
-
-        foreach (require $classMapFile as $codeUnitName => $sourceCodeFile) {
-            if (!str_starts_with($codeUnitName, 'PHPUnit\\') &&
-                !str_starts_with($codeUnitName, 'SebastianBergmann\\')) {
-                continue;
-            }
-
-            if (str_contains($sourceCodeFile, '/tests/')) {
-                continue;
-            }
-
-            require_once $sourceCodeFile;
-        }
     }
 }

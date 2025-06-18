@@ -9,10 +9,13 @@
  */
 namespace PHPUnit\Event;
 
+use const PHP_VERSION;
 use function assert;
 use function interface_exists;
+use function version_compare;
 use PHPUnit\Event\Telemetry\HRTime;
-use PHPUnit\Event\Telemetry\SystemGarbageCollectorStatusProvider;
+use PHPUnit\Event\Telemetry\Php81GarbageCollectorStatusProvider;
+use PHPUnit\Event\Telemetry\Php83GarbageCollectorStatusProvider;
 
 /**
  * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
@@ -96,7 +99,7 @@ final class Facade
             new Telemetry\System(
                 new Telemetry\SystemStopWatchWithOffset($offset),
                 new Telemetry\SystemMemoryMeter,
-                new SystemGarbageCollectorStatusProvider,
+                $this->garbageCollectorStatusProvider(),
             ),
         );
 
@@ -136,7 +139,7 @@ final class Facade
         return new Telemetry\System(
             new Telemetry\SystemStopWatch,
             new Telemetry\SystemMemoryMeter,
-            new SystemGarbageCollectorStatusProvider,
+            $this->garbageCollectorStatusProvider(),
         );
     }
 
@@ -175,21 +178,16 @@ final class Facade
             Test\MarkedIncomplete::class,
             Test\AfterLastTestMethodCalled::class,
             Test\AfterLastTestMethodErrored::class,
-            Test\AfterLastTestMethodFailed::class,
             Test\AfterLastTestMethodFinished::class,
             Test\AfterTestMethodCalled::class,
             Test\AfterTestMethodErrored::class,
-            Test\AfterTestMethodFailed::class,
             Test\AfterTestMethodFinished::class,
             Test\BeforeFirstTestMethodCalled::class,
             Test\BeforeFirstTestMethodErrored::class,
-            Test\BeforeFirstTestMethodFailed::class,
             Test\BeforeFirstTestMethodFinished::class,
             Test\BeforeTestMethodCalled::class,
             Test\BeforeTestMethodErrored::class,
-            Test\BeforeTestMethodFailed::class,
             Test\BeforeTestMethodFinished::class,
-            Test\AdditionalInformationProvided::class,
             Test\ComparatorRegistered::class,
             Test\ConsideredRisky::class,
             Test\DeprecationTriggered::class,
@@ -202,29 +200,29 @@ final class Facade
             Test\PhpDeprecationTriggered::class,
             Test\PhpNoticeTriggered::class,
             Test\PhpunitDeprecationTriggered::class,
-            Test\PhpunitNoticeTriggered::class,
             Test\PhpunitErrorTriggered::class,
             Test\PhpunitWarningTriggered::class,
             Test\PhpWarningTriggered::class,
             Test\PostConditionCalled::class,
             Test\PostConditionErrored::class,
-            Test\PostConditionFailed::class,
             Test\PostConditionFinished::class,
             Test\PreConditionCalled::class,
             Test\PreConditionErrored::class,
-            Test\PreConditionFailed::class,
             Test\PreConditionFinished::class,
             Test\PreparationStarted::class,
             Test\Prepared::class,
-            Test\PreparationErrored::class,
             Test\PreparationFailed::class,
             Test\PrintedUnexpectedOutput::class,
             Test\Skipped::class,
             Test\WarningTriggered::class,
 
             Test\MockObjectCreated::class,
+            Test\MockObjectForAbstractClassCreated::class,
             Test\MockObjectForIntersectionOfInterfacesCreated::class,
+            Test\MockObjectForTraitCreated::class,
+            Test\MockObjectFromWsdlCreated::class,
             Test\PartialMockObjectCreated::class,
+            Test\TestProxyCreated::class,
             Test\TestStubCreated::class,
             Test\TestStubForIntersectionOfInterfacesCreated::class,
 
@@ -239,15 +237,12 @@ final class Facade
             TestRunner\Finished::class,
             TestRunner\Started::class,
             TestRunner\DeprecationTriggered::class,
-            TestRunner\NoticeTriggered::class,
             TestRunner\WarningTriggered::class,
             TestRunner\GarbageCollectionDisabled::class,
             TestRunner\GarbageCollectionTriggered::class,
             TestRunner\GarbageCollectionEnabled::class,
             TestRunner\ChildProcessFinished::class,
             TestRunner\ChildProcessStarted::class,
-            TestRunner\StaticAnalysisForCodeCoverageFinished::class,
-            TestRunner\StaticAnalysisForCodeCoverageStarted::class,
 
             TestSuite\Filtered::class,
             TestSuite\Finished::class,
@@ -264,5 +259,16 @@ final class Facade
 
             $typeMap->addMapping($subscriberInterface, $eventClass);
         }
+    }
+
+    private function garbageCollectorStatusProvider(): Telemetry\GarbageCollectorStatusProvider
+    {
+        if (version_compare(PHP_VERSION, '8.3.0', '>=')) {
+            return new Php83GarbageCollectorStatusProvider;
+        }
+
+        // @codeCoverageIgnoreStart
+        return new Php81GarbageCollectorStatusProvider;
+        // @codeCoverageIgnoreEnd
     }
 }

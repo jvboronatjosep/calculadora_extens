@@ -14,7 +14,7 @@ use function file_put_contents;
 use function ksort;
 use function sprintf;
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Runner\Phpt\TestCase as PhptTestCase;
+use PHPUnit\Runner\PhptTestCase;
 use XMLWriter;
 
 /**
