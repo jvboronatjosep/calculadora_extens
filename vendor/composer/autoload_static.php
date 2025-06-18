@@ -22,7 +22,7 @@ class ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b
         ),
         'A' => 
         array (
-            'App_Calculadora_extens\\' => 23,
+            'App\\' => 4,
         ),
     );
 
@@ -35,7 +35,7 @@ class ComposerStaticInitfbee484fbcb98ba45566f17e8eb69e9b
         array (
             0 => __DIR__ . '/..' . '/myclabs/deep-copy/src/DeepCopy',
         ),
-        'App_Calculadora_extens\\' => 
+        'App\\' => 
         array (
             0 => __DIR__ . '/../..' . '/src',
         ),

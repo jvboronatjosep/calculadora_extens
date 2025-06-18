@@ -1,7 +1,7 @@
 <?php
 
 use PHPUnit\Framework\TestCase;
-use App_Calculadora_extens\Calculadora_extens;
+use App\Calculadora_extens;
 
 class Calculadora_extensTest extends TestCase{
     public function testSuma(){

@@ -1,5 +1,5 @@
 <?php
-namespace App_Calculadora_extens;
+namespace App;
 class Calculadora_extens {
 
 public function suma($a, $b) {

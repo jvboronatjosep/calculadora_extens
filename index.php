@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use App_Calculadora_extens\Calculadora_extens;
+use App\Calculadora_extens;
 
 $calculadora = new Calculadora_extens();
 $resultado = null;
