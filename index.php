@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/src/calculadora_extens.php';
+require_once __DIR__ . '/./src/calculadora_extens.php';
 
 use App_Calculadora_extens\Calculadora_extens;
 
